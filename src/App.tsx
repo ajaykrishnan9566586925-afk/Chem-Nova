@@ -1667,7 +1667,7 @@ const AiChemStudio: React.FC<{
       };
       // 1. Priority: Indian English (en-IN) Bold Male Voice (e.g. Microsoft Prabhat, Ravi, Rishi)
       const indianMale = voices.find(
-        (v) => v.lang.toLowerCase() === 'en-in' && isKnownMale(v)
+        (v) => (v.lang.toLowerCase().replace('_','-') === 'en-in' || v.name.toLowerCase().includes('india')) && isKnownMale(v)
       );
       if (indianMale) return indianMale;
       // 2. Second priority: Any voice with 'India' in its name that is not female (e.g., Prabhat Online (Natural) - English (India))
@@ -1801,7 +1801,7 @@ const AiChemStudio: React.FC<{
           setAudioStatusLabel(
             isTamilMode
               ? `ஆண் குரல் இல்லை (Edge உலாவி அல்லது API Key பயன்படுத்தவும்: ${availableNames || 'None'})`
-              : `No Male Voice in Browser (Open in Edge or add API Key)`
+              : `Browser Fallback (Redeploy Vercel with VITE_GEMINI_API_KEY for Indian Male Accent)`
           );
           advanceChunk();
           return;
