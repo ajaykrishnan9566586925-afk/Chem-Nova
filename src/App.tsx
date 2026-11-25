@@ -1670,11 +1670,18 @@ const AiChemStudio: React.FC<{
         (v) => v.lang.toLowerCase() === 'en-in' && isKnownMale(v)
       );
       if (indianMale) return indianMale;
-      // 2. Fallback: Any English Male Voice (e.g. Microsoft Guy / George / David / Mark) — NEVER female
-      const englishMale = voices.find(
-        (v) => v.lang.toLowerCase().startsWith('en') && isKnownMale(v)
+      // 2. Second priority: Any voice with 'India' in its name that is not female (e.g., Prabhat Online (Natural) - English (India))
+      const indiaNamedMale = voices.find(
+        (v) => v.name.toLowerCase().includes('india') && isNotFemale(v)
       );
-      if (englishMale) return englishMale;
+      if (indiaNamedMale) return indiaNamedMale;
+      // 3. Third priority: British/Commonwealth male voice (Daniel / George / UK English Male) — NEVER American (en-US)
+      const commonwealthMale = voices.find(
+        (v) =>
+          (v.lang.toLowerCase() === 'en-gb' || v.lang.toLowerCase() === 'en-au') &&
+          isKnownMale(v)
+      );
+      if (commonwealthMale) return commonwealthMale;
       return undefined;
     },
     []
@@ -1825,7 +1832,18 @@ const AiChemStudio: React.FC<{
           window.speechSynthesis.cancel();
           window.setTimeout(() => speakIndex(0), 110);
         } else {
+          if (window.speechSynthesis.getVoices().length === 0) {
+        let started = false;
+        const startOnce = () => {
+          if (started) return;
+          started = true;
           speakIndex(0);
+        };
+        window.speechSynthesis.onvoiceschanged = startOnce;
+        window.setTimeout(startOnce, 600);
+      } else {
+        speakIndex(0);
+      }
         }
       };
 
