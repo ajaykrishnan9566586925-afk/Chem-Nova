@@ -1,0 +1,228 @@
+From a7af973b7ad3f8f80fa9a7c014a8fb9e5d69367c Mon Sep 17 00:00:00 2001
+From: abi06311520-ai <2.33226554e+08+abi06311520-ai@users.noreply.github.com>
+Date: Wed, 25 Nov 2026 05:39:09 +0000
+Subject: [PATCH 1/2] Fix Chrome mobile narration fallback
+
+---
+ src/App.tsx | 94 +++++++++++++++++++++++++++++++++++------------------
+ 1 file changed, 63 insertions(+), 31 deletions(-)
+
+diff --git a/src/App.tsx b/src/App.tsx
+index cee8696..d312919 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1690,7 +1690,35 @@ const AiChemStudio: React.FC<{
+       return undefined;
+     },
+     []
+-  );const speakSentenceChainFallback = useCallback(
++  );
++
++  const waitForSpeechVoices = useCallback(async (timeoutMs = 4000): Promise<SpeechSynthesisVoice[]> => {
++    if (!('speechSynthesis' in window)) return [];
++
++    const readVoices = () => window.speechSynthesis.getVoices();
++    const initialVoices = readVoices();
++    if (initialVoices.length > 0) return initialVoices;
++
++    return new Promise((resolve) => {
++      let settled = false;
++      const finish = () => {
++        if (settled) return;
++        settled = true;
++        window.clearTimeout(timeoutId);
++        window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
++        resolve(readVoices());
++      };
++      const onVoicesChanged = () => {
++        if (readVoices().length > 0) finish();
++      };
++      const timeoutId = window.setTimeout(finish, timeoutMs);
++      window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
++      // Some Chromium builds populate the list only after a synchronous read.
++      readVoices();
++    });
++  }, []);
++
++  const speakSentenceChainFallback = useCallback(
+     (fullText: string, sessionId: number, labelSuffix = '') => {
+       if (playbackSessionIdRef.current !== sessionId || isMuted) {
+         audioFinishedRef.current = true;
+@@ -1799,19 +1827,37 @@ const AiChemStudio: React.FC<{
+           lockedWebVoiceRef.current = chosenMale;
+           utterance.voice = chosenMale;
+         } else {
+-          const availableNames = liveVoices
+-            .filter((v) => v.lang.toLowerCase().startsWith(langConfig.code))
+-            .map((v) => v.name)
+-            .join(', ');
+-          setAudioStatusLabel(
+-            isTamilMode
+-              ? `ஆண் குரல் இல்லை (Edge உலாவி அல்லது API Key பயன்படுத்தவும்: ${availableNames || 'None'})`
+-              : `Browser Fallback (Redeploy Vercel with VITE_GEMINI_API_KEY for Indian Male Accent)`
+-          );
+-          advanceChunk();
+-          return;
++          // Mobile Chrome frequently exposes voices without an en-IN male voice.
++          // Do not advance the lesson without speaking; use the browser's best
++          // available English voice and make the reduced guarantee explicit.
++          const fallbackVoice = liveVoices.find((v) => {
++            const lowerName = v.name.toLowerCase();
++            return (
++              v.lang.toLowerCase().replace('_', '-').startsWith('en-') &&
++              !lowerName.includes('female') &&
++              !lowerName.includes('woman')
++            );
++          });
++          if (fallbackVoice) {
++            lockedWebVoiceRef.current = fallbackVoice;
++            utterance.voice = fallbackVoice;
++            setAudioStatusLabel(
++              isTamilMode
++                ? 'இந்திய ஆண் குரல் கிடைக்கவில்லை; சாதனத்தின் ஆங்கிலக் குரல் பயன்படுத்தப்படுகிறது'
++                : 'Indian voice unavailable; using the device English voice'
++            );
++          } else {
++            // Passing no voice lets Chromium use its system default. This is
++            // preferable to silently completing the division with no audio.
++            lockedWebVoiceRef.current = null;
++            setAudioStatusLabel(
++              isTamilMode
++                ? 'சாதனத்தின் இயல்புநிலை குரல் பயன்படுத்தப்படுகிறது'
++                : 'Using the device default voice'
++            );
++          }
+         }
+-        utterance.lang = chosenMale.lang || 'en-IN';
++        utterance.lang = utterance.voice?.lang || 'en-IN';
+         utterance.pitch = 0.84;
+         utterance.rate = 0.88;
+         utterance.volume = 1.0;
+@@ -1837,29 +1883,15 @@ const AiChemStudio: React.FC<{
+           window.speechSynthesis.cancel();
+           window.setTimeout(() => speakIndex(0), 110);
+         } else {
+-          if (window.speechSynthesis.getVoices().length === 0) {
+-        let started = false;
+-        const startOnce = () => {
+-          if (started) return;
+-          started = true;
+           speakIndex(0);
+-        };
+-        window.speechSynthesis.onvoiceschanged = startOnce;
+-        window.setTimeout(startOnce, 600);
+-      } else {
+-        speakIndex(0);
+-      }
+         }
+       };
+ 
+-      if (window.speechSynthesis.getVoices().length > 0) {
+-        startChain();
+-      } else {
+-        window.speechSynthesis.addEventListener('voiceschanged', () => startChain(), { once: true });
+-        window.setTimeout(startChain, 200);
+-      }
++      void waitForSpeechVoices().then(() => {
++        if (playbackSessionIdRef.current === sessionId && !isMuted) startChain();
++      });
+     },
+-    [isMuted, isTamilMode, langConfig.bcp47, selectBoldIndianMaleVoice]
++    [isMuted, isTamilMode, selectBoldIndianMaleVoice, waitForSpeechVoices]
+   );
+ 
+   const sanitizeTextForTts = useCallback((raw: string): string => {
+-- 
+2.43.0
+
+
+From 34f46a0cc239459618254fd71ee55592cc81a889 Mon Sep 17 00:00:00 2001
+From: abi06311520-ai <2.33226554e+08+abi06311520-ai@users.noreply.github.com>
+Date: Wed, 25 Nov 2026 05:45:52 +0000
+Subject: [PATCH 2/2] Require Indian voice before lesson completion
+
+---
+ src/App.tsx | 58 ++++++++++++++++++++++++-----------------------------
+ 1 file changed, 26 insertions(+), 32 deletions(-)
+
+diff --git a/src/App.tsx b/src/App.tsx
+index d312919..ee29f03 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -1827,39 +1827,21 @@ const AiChemStudio: React.FC<{
+           lockedWebVoiceRef.current = chosenMale;
+           utterance.voice = chosenMale;
+         } else {
+-          // Mobile Chrome frequently exposes voices without an en-IN male voice.
+-          // Do not advance the lesson without speaking; use the browser's best
+-          // available English voice and make the reduced guarantee explicit.
+-          const fallbackVoice = liveVoices.find((v) => {
+-            const lowerName = v.name.toLowerCase();
+-            return (
+-              v.lang.toLowerCase().replace('_', '-').startsWith('en-') &&
+-              !lowerName.includes('female') &&
+-              !lowerName.includes('woman')
+-            );
+-          });
+-          if (fallbackVoice) {
+-            lockedWebVoiceRef.current = fallbackVoice;
+-            utterance.voice = fallbackVoice;
+-            setAudioStatusLabel(
+-              isTamilMode
+-                ? 'இந்திய ஆண் குரல் கிடைக்கவில்லை; சாதனத்தின் ஆங்கிலக் குரல் பயன்படுத்தப்படுகிறது'
+-                : 'Indian voice unavailable; using the device English voice'
+-            );
+-          } else {
+-            // Passing no voice lets Chromium use its system default. This is
+-            // preferable to silently completing the division with no audio.
+-            lockedWebVoiceRef.current = null;
+-            setAudioStatusLabel(
+-              isTamilMode
+-                ? 'சாதனத்தின் இயல்புநிலை குரல் பயன்படுத்தப்படுகிறது'
+-                : 'Using the device default voice'
+-            );
+-          }
++          // Never substitute an American, British, female, or device-default
++          // voice. If native Indian speech is unavailable, the Gemini audio
++          // path must provide the narration instead.
++          lockedWebVoiceRef.current = null;
++          setAudioStatusLabel(
++            isTamilMode
++              ? 'இந்திய ஆண் குரல் கிடைக்கவில்லை. Gemini TTS API key தேவை.'
++              : 'Indian male voice unavailable. Configure Gemini TTS to continue.'
++          );
++          audioFinishedRef.current = false;
++          return;
+         }
+-        utterance.lang = utterance.voice?.lang || 'en-IN';
++        utterance.lang = chosenMale.lang || 'en-IN';
+         utterance.pitch = 0.84;
+-        utterance.rate = 0.88;
++        utterance.rate = 0.9;
+         utterance.volume = 1.0;
+         chunkSafetyTimer = window.setTimeout(advanceChunk, maxChunkMs);        utterance.onstart = () => {
+           if (playbackSessionIdRef.current === sessionId) {
+@@ -1873,7 +1855,19 @@ const AiChemStudio: React.FC<{
+         };
+ 
+         utterance.onend = advanceChunk;
+-        utterance.onerror = advanceChunk;
++        utterance.onerror = () => {
++          if (chunkSettled) return;
++          chunkSettled = true;
++          window.clearTimeout(chunkSafetyTimer);
++          if (playbackSessionIdRef.current === sessionId) {
++            audioFinishedRef.current = false;
++            setAudioStatusLabel(
++              isTamilMode
++                ? 'இந்திய குரல் இயக்கப்படவில்லை; பகுதி நிறைவு செய்யப்படவில்லை'
++                : 'Indian voice playback failed; division is not complete'
++            );
++          }
++        };
+ 
+         window.speechSynthesis.speak(utterance);
+       };
+-- 
+2.43.0
+
