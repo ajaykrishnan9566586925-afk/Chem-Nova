@@ -1629,7 +1629,7 @@ const AiChemStudio: React.FC<{
         'sara',
         'linda',
         'catherine',
-        'female',
+        'david', 'mark', 'guy', 'christopher', 'eric', 'roger', 'steffan', 'us english', 'united states', 'female',
         'woman',
         'girl'
       ];
@@ -1889,7 +1889,7 @@ const AiChemStudio: React.FC<{
             {
               parts: [
                 {
-                  text: lang.code === "en" ? `AUDIO DIRECTIVE: Speak strictly in a strong, unmistakable South Indian (Chennai, Tamil Nadu) male chemistry professor English accent (en-IN) with deep baritone resonance, retroflex consonants, and rhythmic Indian syllabic cadence. NEVER use an American or British accent. Do NOT say greetings. Read every word completely:\n${cleanText}` : `${lang.ttsInstruction}\n\n${cleanText}`
+                  text: lang.code === "en" ? `Speak as a senior Tamil Nadu male chemistry professor from Chennai, India, using a natural, bold Indian English (en-IN) accent with clear Indian pronunciation and deep baritone voice. Never use an American accent. Read directly without greetings:\n${cleanText}` : `${lang.ttsInstruction}\n\n${cleanText}`
                 }
               ]
             }
@@ -1898,7 +1898,7 @@ const AiChemStudio: React.FC<{
             responseModalities: ['AUDIO'],
             speechConfig: {
               voiceConfig: {
-                prebuiltVoiceConfig: { voiceName: 'Charon' }
+                prebuiltVoiceConfig: { voiceName: 'Orus' }
               }
             }
           },
