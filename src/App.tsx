@@ -1807,7 +1807,7 @@ const AiChemStudio: React.FC<{
           return;
         }
         utterance.lang = langConfig.bcp47;
-        utterance.pitch = 0.84;
+        utterance.pitch = 0.80; utterance.lang = 'en-IN';
         utterance.rate = 0.88;
         utterance.volume = 1.0;
         chunkSafetyTimer = window.setTimeout(advanceChunk, maxChunkMs);        utterance.onstart = () => {
@@ -1876,7 +1876,14 @@ const AiChemStudio: React.FC<{
   }, []);  const fetchSingleSlideAudioBuffer = useCallback(
     async (textToSpeak: string, lang: LanguageOption): Promise<AudioBuffer | null> => {
       try {
-        const apiKey = getGeminiApiKey();
+        // Use native Indian English (en-IN) bold male voice (Microsoft Prabhat / Ravi) when available so accent is authentically Indian
+      if (lang.code === 'en' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        const indianVoice = selectBoldIndianMaleVoice(window.speechSynthesis.getVoices());
+        if (indianVoice) {
+          return null;
+        }
+      }
+      const apiKey = getGeminiApiKey();
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
         const cleanText = sanitizeTextForTts(textToSpeak);
 
@@ -1885,7 +1892,7 @@ const AiChemStudio: React.FC<{
             {
               parts: [
                 {
-                  text: lang.code === "en" ? `Speak in a bold, deep Indian male professor accent (en-IN). Read clearly without greetings:\n${cleanText}` : `${lang.ttsInstruction}\n\n${cleanText}`
+                  text: lang.code === "en" ? `AUDIO DIRECTIVE: Speak strictly in a strong, unmistakable South Indian (Chennai, Tamil Nadu) male chemistry professor English accent (en-IN) with deep baritone resonance, retroflex consonants, and rhythmic Indian syllabic cadence. NEVER use an American or British accent. Do NOT say greetings. Read every word completely:\n${cleanText}` : `${lang.ttsInstruction}\n\n${cleanText}`
                 }
               ]
             }
@@ -2124,6 +2131,13 @@ const AiChemStudio: React.FC<{
           : `Generating 4-division chemistry video (<5s) + ${langConfig.name} Bold Indian Male Voice...`
       );
 
+      // Use native Indian English (en-IN) bold male voice (Microsoft Prabhat / Ravi) when available so accent is authentically Indian
+      if (lang.code === 'en' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        const indianVoice = selectBoldIndianMaleVoice(window.speechSynthesis.getVoices());
+        if (indianVoice) {
+          return null;
+        }
+      }
       const apiKey = getGeminiApiKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
@@ -3308,6 +3322,13 @@ function ChemNovaStudioContent() {
     setIsTutorThinking(true);
     setTutorAnswer(null);
     try {
+      // Use native Indian English (en-IN) bold male voice (Microsoft Prabhat / Ravi) when available so accent is authentically Indian
+      if (lang.code === 'en' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        const indianVoice = selectBoldIndianMaleVoice(window.speechSynthesis.getVoices());
+        if (indianVoice) {
+          return null;
+        }
+      }
       const apiKey = getGeminiApiKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
       const payload = {
