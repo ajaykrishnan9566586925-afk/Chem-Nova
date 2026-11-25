@@ -1604,108 +1604,81 @@ const AiChemStudio: React.FC<{
     };
   }, [stopAllAudio]);
 
-  const selectBoldIndianMaleVoice = useCallback(
+    const selectBoldIndianMaleVoice = useCallback(
     (voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined => {
-      const targetBcp = langConfig.bcp47.toLowerCase();
-      const targetLangPrefix = langConfig.code.toLowerCase();
-
-      const indianMaleKeywords = [
-        'ravi',
+      if (!voices || voices.length === 0) return undefined;
+      const blockedFemaleNames = [
+        'heera',
+        'neerja',
+        'raveena',
+        'aditi',
+        'priya',
+        'kavya',
+        'divya',
+        'pallavi',
+        'swara',
+        'shruti',
+        'sobhana',
+        'kalpana',
+        'zira',
+        'hazel',
+        'susan',
+        'aria',
+        'jenny',
+        'michelle',
+        'sara',
+        'linda',
+        'catherine',
+        'female',
+        'woman',
+        'girl'
+      ];
+      const preferredMaleNames = [
         'prabhat',
+        'ravi',
+        'rishi',
         'hemant',
         'madhur',
         'valluvar',
-        'rishi',
         'kumar',
         'arjun',
-        'suresh',
-        'karthik',
-        'mohan',
-        'raman',
+        'guy',
+        'christopher',
+        'eric',
+        'roger',
+        'steffan',
+        'ryan',
+        'george',
+        'david',
+        'mark',
+        'daniel',
+        'james',
+        'uk english male',
         'male',
         'man'
       ];
-      const blockedKeywords = [
-        'en-us',
-        'en-gb',
-        'en-au',
-        'en-ca',
-        'american',
-        'united states',
-        'british',
-        'uk',
-        'heera',
-        'swara',
-        'neerja',
-        'kalpana',
-        'pallavi',
-        'shruti',
-        'female',
-        'woman',
-        'priya',
-        'ananya',
-        'lakshmi',
-        'veena',
-        'lekha',
-        'zira',
-        'samantha',
-        'jenny',
-        'aria',
-        'guy',
-        'davis',
-        'mark',
-        'david'
-      ];
-
-      const isAllowedIndianMale = (v: SpeechSynthesisVoice) => {
-        const name = v.name.toLowerCase();
-        const lang = v.lang.toLowerCase();
-        if (blockedKeywords.some((k) => name.includes(k) || lang.includes(k))) {
-          return false;
-        }
-        return true;
+      const isNotFemale = (v: SpeechSynthesisVoice) => {
+        const lower = v.name.toLowerCase();
+        return !blockedFemaleNames.some((f) => lower.includes(f));
       };
-
-      const exactMale = voices.find(
-        (v) =>
-          v.lang.toLowerCase() === targetBcp &&
-          isAllowedIndianMale(v) &&
-          indianMaleKeywords.some((k) => v.name.toLowerCase().includes(k))
+      const isKnownMale = (v: SpeechSynthesisVoice) => {
+        const lower = v.name.toLowerCase();
+        return isNotFemale(v) && preferredMaleNames.some((m) => lower.includes(m));
+      };
+      // 1. Priority: Indian English (en-IN) Bold Male Voice (e.g. Microsoft Prabhat, Ravi, Rishi)
+      const indianMale = voices.find(
+        (v) => v.lang.toLowerCase() === 'en-in' && isKnownMale(v)
       );
-      if (exactMale) return exactMale;
-
-      const exactLang = voices.find(
-        (v) => v.lang.toLowerCase() === targetBcp && isAllowedIndianMale(v)
+      if (indianMale) return indianMale;
+      // 2. Fallback: Any English Male Voice (e.g. Microsoft Guy / George / David / Mark) — NEVER female
+      const englishMale = voices.find(
+        (v) => v.lang.toLowerCase().startsWith('en') && isKnownMale(v)
       );
-      if (exactLang) return exactLang;
-
-      const anyIndianMale = voices.find(
-        (v) =>
-          (v.lang.toLowerCase().includes('-in') || v.name.toLowerCase().includes('india')) &&
-          isAllowedIndianMale(v) &&
-          indianMaleKeywords.some((k) => v.name.toLowerCase().includes(k))
-      );
-      if (anyIndianMale) return anyIndianMale;
-
-      const anyIndian = voices.find(
-        (v) =>
-          (v.lang.toLowerCase().includes('-in') || v.name.toLowerCase().includes('india')) &&
-          isAllowedIndianMale(v)
-      );
-      if (anyIndian) return anyIndian;
-
-      return voices.find(
-        (v) => v.lang.toLowerCase().startsWith(targetLangPrefix) && isAllowedIndianMale(v)
-      );
+      if (englishMale) return englishMale;
+      return undefined;
     },
-    [langConfig.bcp47, langConfig.code]
-  );
-
-  useEffect(() => {
-    lockedWebVoiceRef.current = null;
-  }, [language]);
-
-  const speakSentenceChainFallback = useCallback(
+    []
+  );const speakSentenceChainFallback = useCallback(
     (fullText: string, sessionId: number, labelSuffix = '') => {
       if (playbackSessionIdRef.current !== sessionId || isMuted) {
         audioFinishedRef.current = true;
@@ -1827,7 +1800,7 @@ const AiChemStudio: React.FC<{
           return;
         }
         utterance.lang = langConfig.bcp47;
-        utterance.pitch = 0.90;
+        utterance.pitch = 0.84;
         utterance.rate = 0.88;
         utterance.volume = 1.0;
         chunkSafetyTimer = window.setTimeout(advanceChunk, maxChunkMs);        utterance.onstart = () => {
