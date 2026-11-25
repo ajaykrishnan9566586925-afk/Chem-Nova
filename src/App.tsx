@@ -1665,7 +1665,12 @@ const AiChemStudio: React.FC<{
         const lower = v.name.toLowerCase();
         return isNotFemale(v) && preferredMaleNames.some((m) => lower.includes(m));
       };
-      // 1. Priority: Indian English (en-IN) Bold Male Voice (e.g. Microsoft Prabhat, Ravi, Rishi)
+      // 1. Top Priority: Microsoft Valluvar (bold Tamil male neural voice speaking English with Tamil Nadu accent)
+      const valluvarVoice = voices.find(
+        (v) => v.name.toLowerCase().includes('valluvar') && isNotFemale(v)
+      );
+      if (valluvarVoice) return valluvarVoice;
+      // 2. Second Priority: Indian English (en-IN) Bold Male Voice (Microsoft Prabhat, Ravi, Rishi)
       const indianMale = voices.find(
         (v) => (v.lang.toLowerCase().replace('_','-') === 'en-in' || v.name.toLowerCase().includes('india')) && isKnownMale(v)
       );
@@ -1806,8 +1811,8 @@ const AiChemStudio: React.FC<{
           advanceChunk();
           return;
         }
-        utterance.lang = langConfig.bcp47;
-        utterance.pitch = 0.80; utterance.lang = 'en-IN';
+        utterance.lang = chosenMale.lang || 'en-IN';
+        utterance.pitch = 0.84;
         utterance.rate = 0.88;
         utterance.volume = 1.0;
         chunkSafetyTimer = window.setTimeout(advanceChunk, maxChunkMs);        utterance.onstart = () => {
