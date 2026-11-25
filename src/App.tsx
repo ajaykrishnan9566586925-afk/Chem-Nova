@@ -1876,12 +1876,9 @@ const AiChemStudio: React.FC<{
   }, []);  const fetchSingleSlideAudioBuffer = useCallback(
     async (textToSpeak: string, lang: LanguageOption): Promise<AudioBuffer | null> => {
       try {
-        // Use native Indian English (en-IN) bold male voice (Microsoft Prabhat / Ravi) when available so accent is authentically Indian
-      if (lang.code === 'en' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        if (activeLang.code === 'en' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
         const indianVoice = selectBoldIndianMaleVoice(window.speechSynthesis.getVoices());
-        if (indianVoice) {
-          return null;
-        }
+        if (indianVoice) return null;
       }
       const apiKey = getGeminiApiKey();
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
@@ -2131,13 +2128,6 @@ const AiChemStudio: React.FC<{
           : `Generating 4-division chemistry video (<5s) + ${langConfig.name} Bold Indian Male Voice...`
       );
 
-      // Use native Indian English (en-IN) bold male voice (Microsoft Prabhat / Ravi) when available so accent is authentically Indian
-      if (lang.code === 'en' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        const indianVoice = selectBoldIndianMaleVoice(window.speechSynthesis.getVoices());
-        if (indianVoice) {
-          return null;
-        }
-      }
       const apiKey = getGeminiApiKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
@@ -3322,13 +3312,6 @@ function ChemNovaStudioContent() {
     setIsTutorThinking(true);
     setTutorAnswer(null);
     try {
-      // Use native Indian English (en-IN) bold male voice (Microsoft Prabhat / Ravi) when available so accent is authentically Indian
-      if (lang.code === 'en' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        const indianVoice = selectBoldIndianMaleVoice(window.speechSynthesis.getVoices());
-        if (indianVoice) {
-          return null;
-        }
-      }
       const apiKey = getGeminiApiKey();
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
       const payload = {
