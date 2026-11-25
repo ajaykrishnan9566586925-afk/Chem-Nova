@@ -1876,7 +1876,7 @@ const AiChemStudio: React.FC<{
   }, []);  const fetchSingleSlideAudioBuffer = useCallback(
     async (textToSpeak: string, lang: LanguageOption): Promise<AudioBuffer | null> => {
       try {
-        if (activeLang.code === 'en' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        if (language === 'en' && typeof window !== 'undefined' && 'speechSynthesis' in window) {
         const indianVoice = selectBoldIndianMaleVoice(window.speechSynthesis.getVoices());
         if (indianVoice) return null;
       }
